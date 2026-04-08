@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD HTTP Lab</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .form-panel { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        input { margin-right: 10px; padding: 5px; }
+        #notification { padding: 10px; margin-bottom: 15px; display: none; font-weight: bold; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+
+    <h1>HTTP-запити та CRUD</h1>
+
+    <div id="notification"></div>
+
+    <div class="form-panel">
+        <input type="hidden" id="userId">
+        <input type="text" id="nameInput" placeholder="Ім'я користувача">
+        <input type="email" id="emailInput" placeholder="Email">
+        <button onclick="saveUser()">Зберегти</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Ім'я</th>
+                <th>Email</th>
+                <th>Дії</th>
+            </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+    </table>
+
+    <script>
+        const API_URL = 'https://jsonplaceholder.typicode.com/users';
+
+        //  Завдання 5: Функція для виведення повідомлень 
+        function showNotification(msg, isError = false) {
+            const notif = document.getElementById('notification');
+            notif.textContent = msg;
+            notif.className = isError ? 'error' : 'success';
+            notif.style.display = 'block';
+            setTimeout(() => notif.style.display = 'none', 3000);
+        }
+
+        // Завдання 1: GET (Отримання та відображення даних) 
+        async function fetchUsers() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Помилка завантаження даних');
+                const users = await response.json();
+                
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>
+                            <button onclick="editUser(${user.id}, '${user.name}', '${user.email}')">Редагувати</button>
+                            <button onclick="deleteUser(${user.id})">Видалити</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                showNotification(error.message, true);
+            }
+        }
+
+        // Завдання 2 та 3: POST (Створення) та PATCH (Оновлення) 
+        async function saveUser() {
+            const id = document.getElementById('userId').value;
+            const name = document.getElementById('nameInput').value;
+            const email = document.getElementById('emailInput').value;
+
+            if (!name || !email) {
+                showNotification('Заповніть всі поля', true);
+                return;
+            }
+
+            const method = id ? 'PATCH' : 'POST';
+            const url = id ? `${API_URL}/${id}` : API_URL;
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email })
+                });
+
+                if (!response.ok) throw new Error('Помилка при збереженні');
+                
+                showNotification(`Успішно ${id ? 'оновлено' : 'створено'}!`);
+                
+                document.getElementById('userId').value = '';
+                document.getElementById('nameInput').value = '';
+                document.getElementById('emailInput').value = '';
+                
+                fetchUsers();
+            } catch (error) {
+                showNotification(error.message, true);
+            }
+        }
+
+        function editUser(id, name, email) {
+            document.getElementById('userId').value = id;
+            document.getElementById('nameInput').value = name;
+            document.getElementById('emailInput').value = email;
+        }
+
+        //  4: DELETE (Видалення) 
+        async function deleteUser(id) {
+            try {
+                const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Помилка при видаленні');
+                
+                showNotification(`Користувача ${id} видалено`);
+                fetchUsers();
+            } catch (error) {
+                showNotification(error.message, true);
+            }
+        }
+
+        fetchUsers();
+    </script>
+</body>
+</html>
